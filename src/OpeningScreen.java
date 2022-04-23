@@ -10,6 +10,7 @@ public class OpeningScreen extends JPanel implements WindowDataReceiver{
     private Window window;
 public OpeningScreen (int x, int y, int width, int height){
     this.setBackground(Color.BLACK);
+    this.setLayout(null);
     try {
 
         emulogic=Font.createFont(Font.TRUETYPE_FONT, new File("src/emulogic.ttf")).deriveFont(Font.BOLD&Font.CENTER_BASELINE,20);

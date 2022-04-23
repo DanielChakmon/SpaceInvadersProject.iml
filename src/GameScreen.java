@@ -11,6 +11,10 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
     private SpaceShip player;
     private ArrayList<Alien> aliens;
     private Bullets bullets;
+    private int score;
+    private int scoreIncrement;
+    private final int SCORE_INCREMENT_MODIFIER;
+    private ImageIcon spaceshipIcon;
 
 
     public void sendWindowData(Window window) {
@@ -18,8 +22,11 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
     }
 
     public GameScreen(int x, int y, int width, int height) {
+        final int INITIAL_SCORE_INCREMENT = 100;
+        this.setBounds(x, y, width, height);
         //  Color backgroundColor=new Color(103,106,107);
-        Constants constants=new Constants();
+        Constants constants = new Constants();
+        this.spaceshipIcon = new ImageIcon("src/spaceshipIcon.png");
         bullets = new Bullets();
         this.setBackground(Color.BLACK);
         try {
@@ -28,18 +35,26 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
             ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("src/emulogic.ttf")));
         } catch (IOException | FontFormatException e) {
         }
-        this.setBounds(x, y, width, height);
+        this.setLayout(null);
         this.aliens = new ArrayList<>();
         AlienMovementVariables alienMovementVariables = new AlienMovementVariables();
         AlienFireVariables alienFireVariables = new AlienFireVariables();
         beginCurrentLevel(alienMovementVariables, alienFireVariables);
         this.player = new SpaceShip();
-        JLabel liveCounter=new JLabel("Lives left: "+player.getLivesLeft()+"*");
+        JLabel liveCounter = new JLabel("Lives left: " + player.getLivesLeft() + "*");
         liveCounter.setFont(emulogic);
         liveCounter.setForeground(Color.white);
-        liveCounter.setBounds(constants.WINDOW_WIDTH/64,55*constants.WINDOW_HEIGHT/64,constants.WINDOW_WIDTH/4,2*constants.WINDOW_HEIGHT/32);
+        liveCounter.setBounds(constants.WINDOW_WIDTH / 64, 55 * constants.WINDOW_HEIGHT / 64, constants.WINDOW_WIDTH / 4, 2 * constants.WINDOW_HEIGHT / 32);
+        scoreIncrement = INITIAL_SCORE_INCREMENT;
+        score = 0;
+        SCORE_INCREMENT_MODIFIER = 150;
+        JLabel scoreCounter = new JLabel("score: " + score);
+        scoreCounter.setForeground(Color.white);
+        scoreCounter.setBounds(3 * constants.WINDOW_WIDTH / 8, constants.WINDOW_HEIGHT / 32, constants.WINDOW_WIDTH / 4, constants.WINDOW_HEIGHT / 16);
+        scoreCounter.setFont(emulogic);
+        this.add(scoreCounter);
         this.add(liveCounter);
-        this.mainGameLoop(alienMovementVariables, alienFireVariables,liveCounter);
+        this.mainGameLoop(alienMovementVariables, alienFireVariables, liveCounter, scoreCounter);
 
 
     }
@@ -48,8 +63,8 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
         Constants constants = new Constants();
         if (bullets.getBullets() != null) {
             if (bullets.getBullets().size() != 0) {
-                    ArrayList<Bullet> temp = new ArrayList<Bullet>();
-                    bullets.setBullets(temp);
+                ArrayList<Bullet> temp = new ArrayList<Bullet>();
+                bullets.setBullets(temp);
             }
         }
         int newAlienXMultiplier = 3;
@@ -65,7 +80,7 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
             }
             this.aliens.add(alien);
         }
-
+        scoreIncrement = scoreIncrement * SCORE_INCREMENT_MODIFIER / 100;
         alienMovementVariables.setNumberOfAliens(ALIEN_COUNT);
         alienMovementVariables.setInitialLevelWaitTime(alienMovementVariables.getInitialLevelWaitTime() * alienMovementVariables.getLevelPassageWaitTimeMultiplier() / 100);
         alienMovementVariables.setWaitTime(alienMovementVariables.getInitialLevelWaitTime());
@@ -75,9 +90,11 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
 
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
+        Constants constants = new Constants();
+        this.spaceshipIcon.paintIcon(this, graphics, (17 * constants.WINDOW_WIDTH / 64) + 10, (55 * constants.WINDOW_HEIGHT / 64) + 3);
         this.player.paint(graphics);
         if (this.aliens != null) {
-        //    System.out.println(aliens.size());
+            //    System.out.println(aliens.size());
             if (this.aliens.size() != 0) {
                 for (Alien alien : this.aliens) {
                     alien.paint(graphics);
@@ -93,9 +110,8 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
         }
     }
 
-    public void mainGameLoop(AlienMovementVariables alienMovementVariables, AlienFireVariables alienFireVariables, JLabel liveCounter) {
-
-
+    public void mainGameLoop(AlienMovementVariables alienMovementVariables, AlienFireVariables alienFireVariables, JLabel liveCounter, JLabel scoreCounter) {
+        final int GAME_SCREEN_TO_RESULTS = 5;
         Constants constants = new Constants();
         new Thread(() -> {
             this.setFocusable(true);
@@ -105,7 +121,7 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
 
             new Thread(() -> {
                 while (player.getLivesLeft() > 0) {
-                    liveCounter.setText("Lives left: "+player.getLivesLeft()+"*");
+
                     boolean toDecreesLiveCount = false;
                     if (bullets.getBullets() != null) {
                         for (Bullet bullet : this.bullets.getBullets()) {
@@ -113,17 +129,21 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
                             if (toDecreesLiveCount) {
                                 player.decreesLiveCount();
                                 bullet.setToDisplay(false);
+                                liveCounter.setText("Lives left: " + player.getLivesLeft() + "*");
                                 //removeABullet(bullet);
 
                             }
                         }
                     }
                 }
+                if (player.getLivesLeft() < 1) {
+                    window.switchPanels(GAME_SCREEN_TO_RESULTS);
+                }
             }).start();
 
             if (this.aliens != null) {
                 if (this.aliens.size() != 0) {
-                    alienControl(alienMovementVariables, alienFireVariables);
+                    alienControl(alienMovementVariables, alienFireVariables, scoreCounter);
                 }
             }
             while (true) {
@@ -131,11 +151,11 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
 
                 if (aliens == null) {
                     beginCurrentLevel(alienMovementVariables, alienFireVariables);
-                    alienControl(alienMovementVariables, alienFireVariables);
+                    alienControl(alienMovementVariables, alienFireVariables, scoreCounter);
                 } else {
                     if (aliens.size() == 0) {
                         beginCurrentLevel(alienMovementVariables, alienFireVariables);
-                        alienControl(alienMovementVariables, alienFireVariables);
+                        alienControl(alienMovementVariables, alienFireVariables, scoreCounter);
                     }
                 }
 
@@ -173,6 +193,7 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
                         bullet.setToDisplay(false);
                         if (bullet.isFriendly()) {
                             bullets.setNumberOfFriendlyBullets(bullets.getNumberOfFriendlyBullets() - 1);
+
                         }
                     }
                 }
@@ -186,9 +207,10 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
         //   }
     }
 
-    public void alienControl(AlienMovementVariables alienMovementVariables, AlienFireVariables alienFireVariables) {
+    public void alienControl(AlienMovementVariables alienMovementVariables, AlienFireVariables alienFireVariables, JLabel scoreCounter) {
         final int RIGHT = 0;
         final int LEFT = 1;
+        Font myFont = emulogic.deriveFont(10f);
         Constants constants = new Constants();
         for (Alien alien : this.aliens) {
             //     if (!alien.isMovementThreadActive()) {
@@ -213,7 +235,7 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
 
                                 while (!changeDirection) {
                                     alien.moveRight();
-                                    randomFire(alienFireVariables,alien);
+                                    randomFire(alienFireVariables, alien);
                                     if (alien.getAlienX() + alien.getWidth() >= constants.WINDOW_WIDTH - 20) {
                                         changeDirection = true;
                                         alienMovementVariables.setMoveDirection(LEFT);
@@ -237,7 +259,7 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
 
                                 while (!changeDirection) {
                                     alien.moveLeft();
-                                    randomFire(alienFireVariables,alien);
+                                    randomFire(alienFireVariables, alien);
                                     if (alien.getAlienX() <= 10) {
                                         changeDirection = true;
                                         alienMovementVariables.setMoveDirection(RIGHT);
@@ -270,11 +292,38 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
                         for (Bullet bullet : this.bullets.getBullets()) {
                             toKill = alien.checkCollision(bullet);
                             if (toKill) {
+                                score = score + scoreIncrement;
+                                scoreCounter.setText("score: " + score);
                                 bullets.setNumberOfFriendlyBullets(0);
                                 alien.kill();
                                 alienMovementVariables.setNumberOfAliens(alienMovementVariables.getNumberOfAliens() - 1);
                                 alienMovementVariables.setWaitTime((alienMovementVariables.getWaitTime() * alienMovementVariables.getWaitTimeMultiplier()) / 100);
                                 alienFireVariables.setFireChanceModifier((alienFireVariables.getFireChanceModifier() * alienFireVariables.getFireChanceIncrementModifier()) / 100);
+                                new Thread(() -> {
+                                    JLabel scorePlusNotifier = new JLabel("+" + scoreIncrement + "!");
+                                    scorePlusNotifier.setFont(myFont);
+                                    Color foregroundColor = Color.lightGray;
+                                    scorePlusNotifier.setBounds(alien.getAlienX(), alien.getAlienY(), alien.getWidth(), alien.getHeight());
+                                    scorePlusNotifier.setForeground(foregroundColor);
+
+                                    this.add(scorePlusNotifier);
+                                    scorePlusNotifier.setOpaque(false);
+                                    int sleepLength = 50;
+                                    try {
+                                        Thread.sleep(500);
+                                        Color darkestForeground = new Color(41, 41, 41);
+                                        while (foregroundColor.getRGB() > darkestForeground.getRGB()) {
+
+                                            Thread.sleep(sleepLength);
+                                            foregroundColor = foregroundColor.darker();
+                                            scorePlusNotifier.setForeground(foregroundColor);
+                                            sleepLength = sleepLength - 3;
+                                        }
+                                        this.remove(scorePlusNotifier);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                }).start();
                                 bullet.setToDisplay(false);
                                 //removeABullet(bullet);
                                 aliens.remove(alien);
@@ -287,7 +336,8 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
             //   }
         }
     }
-    public void randomFire(AlienFireVariables alienFireVariables, Alien alien){
+
+    public void randomFire(AlienFireVariables alienFireVariables, Alien alien) {
         Random random = new Random();
         final int TO_FIRE = 1;
         int fireCase = random.nextInt(alienFireVariables.getFireChanceModifier());
@@ -325,5 +375,9 @@ public class GameScreen extends JPanel implements WindowDataReceiver {
 
     public SpaceShip getPlayer() {
         return this.player;
+    }
+
+    public int getScore() {
+        return this.score;
     }
 }

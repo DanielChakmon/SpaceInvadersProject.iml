@@ -13,6 +13,7 @@ public class Instructions extends JPanel implements WindowDataReceiver{
     }
     public Instructions(int x, int y, int width, int height) {
         this.setBackground(Color.BLACK);
+        this.setLayout(null);
         try {
             emulogic = Font.createFont(Font.TRUETYPE_FONT, new File("src/emulogic.ttf")).deriveFont(Font.BOLD & Font.CENTER_BASELINE, 20);
             GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -28,8 +29,8 @@ public class Instructions extends JPanel implements WindowDataReceiver{
         title.setBounds((3*constants.WINDOW_WIDTH)/8,(3* constants.WINDOW_HEIGHT/32)-60,constants.WINDOW_WIDTH/4,constants.WINDOW_HEIGHT/8);
         JLabel bodyOne=new JLabel("Your objective is to kill the as much aliens as you can without getting killed.");
         JLabel bodyTwo=new JLabel("Use the arrow keys to move to the sides and use the space bar to shot.");
-        JLabel bodyThree=new JLabel("You will have three hideouts to hide under but any incoming ");
-        JLabel bodyFour=new JLabel("missiles would take out a part of the hide out, including yours.");
+        JLabel bodyThree=new JLabel("Your score would be displayed at the top of the screen, every alien");
+        JLabel bodyFour=new JLabel("you kill would increase your score according to the number of waves you cleared ");
         JLabel bodyFive=new JLabel("Your live count would be shown in the bottom left corner, when it reaches 0, you're out!");
         bodyOne.setForeground(Color.WHITE);
         bodyOne.setFont(myFont);
